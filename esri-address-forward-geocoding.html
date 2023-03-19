@@ -1,0 +1,134 @@
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta
+            name="viewport"
+            content="initial-scale=1, maximum-scale=1, user-scalable=no"
+        />
+        <title>ArcGIS Developer Guide: Forward geocoding</title>
+        <!-- ArcGIS Mapping APIs and Location Services Developer Guide
+    Learn more: https://developers.arcgis.com/documentation/mapping-apis-and-services/search/
+    -->
+        <style>
+            html,
+            body,
+            #viewDiv {
+                padding: 0;
+                margin: 0;
+                height: 224px;
+                width: 378px;
+            }
+            .hidden {
+                display: none;
+            }
+            .esri-popup__main-container {
+                width: auto !important;
+            }
+        </style>
+
+        <link
+            rel="stylesheet"
+            href="https://js.arcgis.com/4.25/esri/themes/dark/main.css"
+        />
+        <script src="https://js.arcgis.com/4.25"></script>
+
+        <script>
+            _name = "Entity Name";
+            require([
+                "esri/config",
+                "esri/Map",
+                "esri/views/MapView",
+                "esri/Graphic",
+                "esri/rest/locator",
+            ], (esriConfig, Map, MapView, Graphic, locator) => {
+                esriConfig.apiKey = "YOUR_API_KEY"; //Your API key here
+
+                const map = new Map({
+                    basemap: "arcgis-dark-gray", //Basemap layer service
+                });
+
+                const view = new MapView({
+                    container: "viewDiv",
+                    map: map,
+                    constraints: {
+                        snapToZoom: false,
+                    },
+                });
+
+                view.popup.actions = [];
+                view.popup.viewModel.includeDefaultActions = false;
+                view.ui.move(["zoom"], "bottom-left");
+
+                view.when(() => {
+                    const geocodingServiceUrl =
+                        "https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer";
+
+                    const params = {
+                        address: {
+                            address:
+                                //Tolerates non-address data like building names preceding address
+                                "Union Station, 225 S Canal St, Chicago, IL 60606",
+                        },
+                    };
+
+                    locator
+                        .addressToLocations(geocodingServiceUrl, params)
+                        .then((results) => {
+                            showResult(results);
+                        });
+
+                    function showResult(results) {
+                        if (results.length) {
+                            const result = results[0];
+                            view.graphics.add(
+                                new Graphic({
+                                    symbol: {
+                                        type: "simple-marker",
+                                        color: "#000000",
+                                        size: "8px",
+                                        outline: {
+                                            color: "#ffffff",
+                                            width: "1px",
+                                        },
+                                    },
+                                    // symbol: {
+                                    //     type: "picture-marker",
+                                    //     url: "https://www.svgrepo.com/show/127575/location-sign.svg",
+                                    //     width: "20",
+                                    //     height: "20",
+                                    // },
+                                    geometry: result.location,
+                                    attributes: {
+                                        // title: "{title}",
+                                        address: result.address,
+                                    },
+                                    popupTemplate: {
+                                        title: _name,
+                                    },
+                                })
+                            );
+                            const g = view.graphics.getItemAt(0);
+                            view.popup.set("dockEnabled", true);
+                            view.popup.set("dockOptions", {
+                                breakpoint: false,
+                                buttonEnabled: false,
+                                position: "top-right",
+                            });
+                            view.popup.open({
+                                features: [g],
+                                location: g.geometry,
+                            });
+                            view.goTo({
+                                target: result.location,
+                                zoom: 13,
+                            });
+                        }
+                    }
+                });
+            });
+        </script>
+    </head>
+    <body>
+        <div id="viewDiv"></div>
+    </body>
+</html>
